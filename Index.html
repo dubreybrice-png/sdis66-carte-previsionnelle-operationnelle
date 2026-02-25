@@ -74,7 +74,7 @@
   <button class="ctrl-btn active" onclick="toggleGroupement('Nord',this)">🔵 Nord</button>
   <button class="ctrl-btn active" onclick="toggleGroupement('Ouest',this)">🟣 Ouest</button>
   <button class="ctrl-btn active" onclick="toggleGroupement('Sud',this)">🟠 Sud</button>
-  <button class="ctrl-btn" onclick="toggleLabels(this)" id="btnLabels">🏷️ Noms</button>
+  <button class="ctrl-btn active" onclick="toggleLabels(this)" id="btnLabels">🏷️ Noms</button>
   <button class="ctrl-btn" onclick="showExportModal()">📄 Export PDF</button>
 </div>
 
@@ -116,7 +116,7 @@ var map;
 var markersPerGroupement = {Nord:[],Ouest:[],Sud:[]};
 var groupementVisible = {Nord:true,Ouest:true,Sud:true};
 var allMarkers = [];
-var labelsVisible = false;
+var labelsVisible = true;
 var centresData = [];
 
 var PO_BOUNDS = L.latLngBounds(L.latLng(42.33,1.72), L.latLng(42.92,3.18));
@@ -150,7 +150,7 @@ function chargerDonnees(){
     renderCentres(centresData);
     if(allMarkers.length>0){
       var grp=L.featureGroup(allMarkers);
-      map.fitBounds(grp.getBounds().pad(0.08));
+      map.fitBounds(grp.getBounds().pad(0.02));
     }
     var total=centresData.reduce(function(s,c){return s+c.effectifActuel;},0);
     document.getElementById('badge-info').textContent=total+' ISP — '+centresData.length+' centres';
@@ -165,7 +165,7 @@ function renderCentres(centres){
     if(!c.lat||!c.lng)return;
     var size=44;
     if(c.effectifCible>=20)size=52;else if(c.effectifCible>=10)size=48;else if(!c.effectifCible)size=36;
-    var icon=L.divIcon({className:'',html:buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label" style="display:none">'+c.nom+'</div>',iconSize:[size,size+10],iconAnchor:[size/2,size/2]});
+    var icon=L.divIcon({className:'',html:buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label">'+c.nom+'</div>',iconSize:[size,size+10],iconAnchor:[size/2,size/2]});
     var m=L.marker([c.lat,c.lng],{icon:icon});
     var taux=c.effectifCible>0?Math.round((c.effectifActuel/c.effectifCible)*100)+'%':'—';
     m.bindTooltip('<strong>'+c.nom+'</strong> ('+c.groupement+')<br>Actuel: <b style="color:#27ae60">'+c.effectifActuel+'</b> · Cible: <b style="color:#e67e22">'+(c.effectifCible||'—')+'</b> · Taux: <b>'+taux+'</b>',{className:'centre-tooltip',direction:'top',offset:[0,-size/2+4]});

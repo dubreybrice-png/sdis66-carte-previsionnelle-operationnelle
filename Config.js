@@ -63,9 +63,9 @@ var Config = (function () {
     { id: 'porte',                nom: 'Porte',                      groupement: 'Ouest', lat: 42.5472, lng: 1.8312, cible: 3 },
 
     // ─── GROUPEMENT SUD ───
-    { id: 'pnord',                nom: 'Perpignan Nord',             groupement: 'Sud',   lat: 42.7100, lng: 2.8950, cible: 10 },
-    { id: 'pouest',               nom: 'Perpignan Ouest',            groupement: 'Sud',   lat: 42.6980, lng: 2.8530, cible: 6 },
-    { id: 'psud',                 nom: 'Perpignan Sud',              groupement: 'Sud',   lat: 42.6850, lng: 2.8900, cible: 10 },
+    { id: 'pnord',                nom: 'Perpignan Nord',             groupement: 'Sud',   lat: 42.7200, lng: 2.8950, cible: 10 },
+    { id: 'pouest',               nom: 'Perpignan Ouest',            groupement: 'Sud',   lat: 42.6980, lng: 2.8400, cible: 6 },
+    { id: 'psud',                 nom: 'Perpignan Sud',              groupement: 'Sud',   lat: 42.6770, lng: 2.8950, cible: 10 },
     { id: 'riberal',              nom: 'Ribéral',                    groupement: 'Sud',   lat: 42.6755, lng: 2.8345, cible: 4 },
     { id: 'les-aspres',           nom: 'Les Aspres',                 groupement: 'Sud',   lat: 42.6400, lng: 2.7900, cible: 6 },
     { id: 'canet',                nom: 'Canet',                      groupement: 'Sud',   lat: 42.7066, lng: 3.0130, cible: 7 },
