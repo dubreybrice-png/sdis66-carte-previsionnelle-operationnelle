@@ -35,7 +35,7 @@ Elle permet de visualiser sur une carte interactive l'état des effectifs ISP de
 | Groupement | Centres |
 |---|---|
 | **Nord** (10) | Caudiès, Saint Paul De Fenouillet, Maury, Vingrau, Salses, Le Barcarès, Rivesaltes, Salanque, Agly, Baixas |
-| **Ouest** (13) | Sounia, Ille Sur Tet, Vinca, Millas, Prades, Capcir, Olette, Vernet, Font Romeu, Mont Louis, Saillagouse, Cerdagne, Porte |
+| **Ouest** (13) | Sournia, Ille Sur Tet, Vinca, Millas, Prades, Capcir, Olette, Vernet, Font Romeu, Mont Louis, Saillagouse, Cerdagne, Porte |
 | **Sud** (17) | Perpignan Nord, Perpignan Sud, Ribéral, Les Aspres, Canet, Saint Cyprien, Elne, Palau, Argelès, Boulou, Céret, Vallespir, St Laurent De Cerdans, Prats, Côte Vermeille, Banyuls, Cerbère |
 
 ## Structure du projet

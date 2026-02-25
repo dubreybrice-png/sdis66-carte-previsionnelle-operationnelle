@@ -48,7 +48,7 @@ var Config = (function () {
     { id: 'baixas',               nom: 'Baixas',                     groupement: 'Nord',  lat: 42.7546, lng: 2.8103, cible: 3 },
 
     // ─── GROUPEMENT OUEST ───
-    { id: 'sounia',               nom: 'Sounia',                     groupement: 'Ouest', lat: 42.7316, lng: 2.4317, cible: 3 },
+    { id: 'sournia',              nom: 'Sournia',                    groupement: 'Ouest', lat: 42.7316, lng: 2.4317, cible: 3 },
     { id: 'ille-sur-tet',         nom: 'Ille Sur Tet',               groupement: 'Ouest', lat: 42.6710, lng: 2.6210, cible: 5 },
     { id: 'vinca',                nom: 'Vinca',                      groupement: 'Ouest', lat: 42.6438, lng: 2.5277, cible: 4 },
     { id: 'millas',               nom: 'Millas',                     groupement: 'Ouest', lat: 42.6944, lng: 2.6950, cible: 5 },
