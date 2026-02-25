@@ -45,7 +45,7 @@
     .leaflet-tooltip.centre-tooltip{background:rgba(26,26,46,.9);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 9px;font-size:.75rem;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.3)}
     .leaflet-tooltip.centre-tooltip::before{border-top-color:rgba(26,26,46,.9)}
 
-    .marker-label{position:absolute;top:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;font-weight:700;color:#2c3e50;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none;margin-top:1px}
+    .marker-label{position:absolute;top:100%;left:50%;transform:translate(-50%,-4px);white-space:nowrap;font-size:9px;font-weight:700;color:#2c3e50;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none;margin-top:0}
 
     #export-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:5000;align-items:center;justify-content:center}
     #export-modal.visible{display:flex}
@@ -162,7 +162,7 @@ function renderCentres(centres){
     if(!c.lat||!c.lng)return;
     var size=44;
     if(c.effectifCible>=20)size=52;else if(c.effectifCible>=10)size=48;else if(!c.effectifCible)size=36;
-    var icon=L.divIcon({className:'',html:buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label" style="display:none">'+c.nom+'</div>',iconSize:[size,size+16],iconAnchor:[size/2,size/2]});
+    var icon=L.divIcon({className:'',html:buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label" style="display:none">'+c.nom+'</div>',iconSize:[size,size+10],iconAnchor:[size/2,size/2]});
     var m=L.marker([c.lat,c.lng],{icon:icon});
     var taux=c.effectifCible>0?Math.round((c.effectifActuel/c.effectifCible)*100)+'%':'—';
     m.bindTooltip('<strong>'+c.nom+'</strong> ('+c.groupement+')<br>Actuel: <b style="color:#27ae60">'+c.effectifActuel+'</b> · Cible: <b style="color:#e67e22">'+(c.effectifCible||'—')+'</b> · Taux: <b>'+taux+'</b>',{className:'centre-tooltip',direction:'top',offset:[0,-size/2+4]});
