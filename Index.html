@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SDIS 66 — Carte Prévisionnelle Opérationnelle</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+    }
+
+    /* ── Header ── */
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #c0392b, #e74c3c);
+      padding: 10px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+      position: relative;
+    }
+
+    #header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    #header .badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+
+    /* ── Carte ── */
+    #map {
+      width: 100%;
+      height: calc(100vh - 50px);
+    }
+
+    /* ── Panneau latéral ── */
+    #sidebar {
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      width: 320px;
+      max-height: calc(100vh - 80px);
+      background: rgba(26, 26, 46, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      display: none;
+    }
+
+    #sidebar.active { display: block; }
+
+    #sidebar h2 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: #e74c3c;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.85rem;
+    }
+
+    .info-row .label { color: #999; }
+    .info-row .value { font-weight: 600; }
+
+    /* ── Légende ── */
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      left: 10px;
+      background: rgba(26, 26, 46, 0.9);
+      padding: 12px 16px;
+      border-radius: 10px;
+      z-index: 1000;
+      font-size: 0.8rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Contrôles ── */
+    .controls {
+      position: absolute;
+      top: 60px;
+      left: 10px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ctrl-btn {
+      background: rgba(26, 26, 46, 0.9);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .ctrl-btn:hover { background: #e74c3c; }
+    .ctrl-btn.active { background: #c0392b; border-color: #e74c3c; }
+
+    /* ── Loading ── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      z-index: 9999;
+      font-size: 1.2rem;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(231,76,60,0.3);
+      border-top-color: #e74c3c;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Chargement de la carte…</span>
+  </div>
+
+  <!-- Header -->
+  <div id="header">
+    <h1>🗺️ SDIS 66 — Carte Prévisionnelle Opérationnelle</h1>
+    <span class="badge" id="timestamp">—</span>
+  </div>
+
+  <!-- Carte -->
+  <div id="map"></div>
+
+  <!-- Contrôles de couches -->
+  <div class="controls">
+    <button class="ctrl-btn active" data-layer="casernes" onclick="toggleLayer('casernes', this)">🏛️ Casernes</button>
+    <button class="ctrl-btn active" data-layer="risques" onclick="toggleLayer('risques', this)">⚠️ Risques</button>
+    <button class="ctrl-btn active" data-layer="zones" onclick="toggleLayer('zones', this)">📐 Zones</button>
+    <button class="ctrl-btn" data-layer="moyens" onclick="toggleLayer('moyens', this)">🚒 Moyens</button>
+  </div>
+
+  <!-- Légende -->
+  <div class="legend">
+    <strong>Légende</strong>
+    <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div> CSP</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div> CS</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f1c40f"></div> CI</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div> Risque SEVESO</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div> Risque Inondation</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div> Risque Feu forêt</div>
+  </div>
+
+  <!-- Panneau latéral -->
+  <div id="sidebar">
+    <h2 id="sidebar-title">Détails</h2>
+    <div id="sidebar-content"></div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // ── État global ──
+    var map, layers = {}, data = {};
+
+    // ── Couleurs par type ──
+    var COLORS = {
+      CSP: '#e74c3c',
+      CS: '#e67e22',
+      CI: '#f1c40f',
+      'SEVESO': '#9b59b6',
+      'Inondation': '#3498db',
+      'Feu forêt': '#2ecc71',
+      default: '#95a5a6'
+    };
+
+    // ── Initialisation ──
+    function init() {
+      google.script.run
+        .withSuccessHandler(function (config) {
+          initMap(config);
+          loadData();
+        })
+        .withFailureHandler(function () {
+          // Fallback si pas de config
+          initMap({ center: { lat: 42.6887, lng: 2.8948 }, zoom: 10 });
+          loadData();
+        })
+        .getMapConfig();
+    }
+
+    function initMap(config) {
+      map = L.map('map', {
+        center: [config.center.lat, config.center.lng],
+        zoom: config.zoom || 10,
+        zoomControl: true
+      });
+
+      // Tuile OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors | SDIS 66',
+        maxZoom: 18
+      }).addTo(map);
+
+      // Groupes de couches
+      layers.casernes = L.layerGroup().addTo(map);
+      layers.risques = L.layerGroup().addTo(map);
+      layers.zones = L.layerGroup().addTo(map);
+      layers.moyens = L.layerGroup();
+
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function loadData() {
+      google.script.run
+        .withSuccessHandler(function (result) {
+          data = result;
+          renderCasernes(result.casernes || []);
+          renderRisques(result.risques || []);
+          renderZones(result.zones || []);
+          document.getElementById('timestamp').textContent =
+            'MAJ : ' + new Date(result.timestamp).toLocaleString('fr-FR');
+        })
+        .withFailureHandler(function (err) {
+          console.error('Erreur chargement données:', err);
+        })
+        .getOperationalData();
+    }
+
+    // ── Rendu des casernes ──
+    function renderCasernes(casernes) {
+      casernes.forEach(function (c) {
+        if (!c.lat || !c.lng) return;
+        var color = COLORS[c.type] || COLORS.default;
+        var marker = L.circleMarker([c.lat, c.lng], {
+          radius: c.type === 'CSP' ? 10 : 7,
+          fillColor: color,
+          color: '#fff',
+          weight: 2,
+          fillOpacity: 0.9
+        });
+        marker.bindTooltip(c.nom + ' (' + c.type + ')');
+        marker.on('click', function () { showSidebar('caserne', c); });
+        layers.casernes.addLayer(marker);
+      });
+    }
+
+    // ── Rendu des risques ──
+    function renderRisques(risques) {
+      risques.forEach(function (r) {
+        if (!r.lat || !r.lng) return;
+        var color = COLORS[r.type] || COLORS.default;
+        var marker = L.circleMarker([r.lat, r.lng], {
+          radius: 6,
+          fillColor: color,
+          color: color,
+          weight: 1,
+          fillOpacity: 0.6
+        });
+        marker.bindTooltip('⚠️ ' + r.type + ' — ' + r.niveau);
+        marker.on('click', function () { showSidebar('risque', r); });
+        layers.risques.addLayer(marker);
+
+        // Rayon de danger
+        if (r.rayon > 0) {
+          var circle = L.circle([r.lat, r.lng], {
+            radius: r.rayon,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.1,
+            weight: 1,
+            dashArray: '5,5'
+          });
+          layers.risques.addLayer(circle);
+        }
+      });
+    }
+
+    // ── Rendu des zones ──
+    function renderZones(zones) {
+      zones.forEach(function (z) {
+        if (!z.polygone) return;
+        try {
+          var coords = JSON.parse(z.polygone);
+          var polygon = L.polygon(coords, {
+            color: z.couleur,
+            fillColor: z.couleur,
+            fillOpacity: 0.15,
+            weight: 2
+          });
+          polygon.bindTooltip(z.nom);
+          polygon.on('click', function () { showSidebar('zone', z); });
+          layers.zones.addLayer(polygon);
+        } catch (e) {
+          console.warn('Zone polygone invalide:', z.nom);
+        }
+      });
+    }
+
+    // ── Toggle couche ──
+    function toggleLayer(name, btn) {
+      if (map.hasLayer(layers[name])) {
+        map.removeLayer(layers[name]);
+        btn.classList.remove('active');
+      } else {
+        map.addLayer(layers[name]);
+        btn.classList.add('active');
+      }
+    }
+
+    // ── Panneau latéral ──
+    function showSidebar(type, item) {
+      var sidebar = document.getElementById('sidebar');
+      var title = document.getElementById('sidebar-title');
+      var content = document.getElementById('sidebar-content');
+
+      var html = '';
+      if (type === 'caserne') {
+        title.textContent = '🏛️ ' + item.nom;
+        html = infoRow('Type', item.type)
+          + infoRow('Commune', item.commune)
+          + infoRow('Effectif', item.effectif)
+          + infoRow('Véhicules', item.vehicules);
+      } else if (type === 'risque') {
+        title.textContent = '⚠️ ' + item.type;
+        html = infoRow('Niveau', item.niveau)
+          + infoRow('Description', item.description)
+          + infoRow('Rayon', item.rayon ? item.rayon + ' m' : '—');
+      } else if (type === 'zone') {
+        title.textContent = '📐 ' + item.nom;
+        html = infoRow('Type', item.type)
+          + infoRow('Caserne principale', item.casernePrincipale);
+      }
+
+      content.innerHTML = html;
+      sidebar.classList.add('active');
+    }
+
+    function infoRow(label, value) {
+      return '<div class="info-row"><span class="label">' + label
+        + '</span><span class="value">' + (value || '—') + '</span></div>';
+    }
+
+    // Fermer sidebar en cliquant sur la carte
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('map').addEventListener('click', function (e) {
+        if (e.target === e.currentTarget || e.target.classList.contains('leaflet-container')) {
+          document.getElementById('sidebar').classList.remove('active');
+        }
+      });
+    });
+
+    // ── Lancement ──
+    init();
+  </script>
+
+</body>
+
+</html>
