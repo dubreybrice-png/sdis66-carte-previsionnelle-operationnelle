@@ -1,81 +1,90 @@
 /**
  * SDIS 66 — Carte Prévisionnelle Opérationnelle
- * Fichier principal — Point d'entrée de l'application
+ * Point d'entrée principal — Menu, doGet, fonctions serveur
  */
 
-/**
- * Affiche l'interface web de la carte
- */
-function doGet(e) {
+/* ═══════════════════════════════════════════════════════
+   WEBAPP
+   ═══════════════════════════════════════════════════════ */
+
+function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('SDIS 66 — Carte Prévisionnelle Opérationnelle')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/**
- * Récupère les données de configuration depuis le spreadsheet
- * @returns {Object} Configuration de la carte
- */
-function getMapConfig() {
-  return Config.getMapSettings();
-}
+/* ═══════════════════════════════════════════════════════
+   MENU GOOGLE SHEETS
+   ═══════════════════════════════════════════════════════ */
 
-/**
- * Récupère toutes les données opérationnelles pour la carte
- * @returns {Object} Données des casernes, risques, zones, moyens
- */
-function getOperationalData() {
-  return DataService.getAllData();
-}
-
-/**
- * Récupère les données d'une zone spécifique
- * @param {string} zoneId - Identifiant de la zone
- * @returns {Object} Données de la zone
- */
-function getZoneDetails(zoneId) {
-  return DataService.getZoneById(zoneId);
-}
-
-/**
- * Menu personnalisé dans Google Sheets
- */
 function onOpen() {
-  var ui = SpreadsheetApp.getUi();
-  ui.createMenu('🗺️ Carte Opérationnelle')
-    .addItem('Ouvrir la carte', 'openMap')
-    .addItem('Rafraîchir les données', 'refreshData')
+  SpreadsheetApp.getUi()
+    .createMenu('🗺️ Carte Opérationnelle')
+    .addItem('📋 Initialiser le classeur', 'initialiserClasseur')
     .addSeparator()
-    .addItem('Configuration', 'openConfig')
+    .addItem('🔄 Actualiser Par Centre', 'actualiserParCentre')
+    .addItem('🎯 Actualiser Priorisation', 'actualiserPriorisation')
+    .addItem('🔄 Tout actualiser', 'toutActualiser')
+    .addSeparator()
+    .addItem('🗺️ Ouvrir la carte', 'ouvrirCarte')
     .addToUi();
 }
 
-/**
- * Ouvre la carte dans un nouvel onglet
- */
-function openMap() {
+/* ═══════════════════════════════════════════════════════
+   ACTIONS MENU
+   ═══════════════════════════════════════════════════════ */
+
+function initialiserClasseur() {
+  SpreadsheetSetup.initialiser();
+}
+
+function actualiserParCentre() {
+  DataService.actualiserParCentre();
+}
+
+function actualiserPriorisation() {
+  PriorisationService.actualiserPriorisation();
+}
+
+function toutActualiser() {
+  DataService.actualiserParCentre();
+  PriorisationService.actualiserPriorisation();
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Onglets "Par Centre" et "Priorisation" actualisés ✅',
+    'Carte Opérationnelle', 5
+  );
+}
+
+function ouvrirCarte() {
   var html = HtmlService.createHtmlOutputFromFile('Index')
-    .setWidth(1200)
-    .setHeight(800);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Carte Prévisionnelle Opérationnelle');
+    .setWidth(1300)
+    .setHeight(850);
+  SpreadsheetApp.getUi().showModalDialog(html, '🗺️ Carte Prévisionnelle Opérationnelle');
+}
+
+/* ═══════════════════════════════════════════════════════
+   FONCTIONS SERVEUR exposées au client HTML (google.script.run)
+   ═══════════════════════════════════════════════════════ */
+
+/**
+ * Retourne la config de la carte
+ */
+function getMapConfig() {
+  return Config.MAP;
 }
 
 /**
- * Rafraîchit les données en cache
+ * Retourne les données de tous les centres pour la carte
+ * [{nom, groupement, lat, lng, effectifActuel, effectifCible}]
  */
-function refreshData() {
-  var cache = CacheService.getScriptCache();
-  cache.removeAll(['mapData', 'zones', 'casernes', 'risques']);
-  SpreadsheetApp.getActiveSpreadsheet().toast('Données rafraîchies ✅', 'Carte Opérationnelle');
+function getCarteData() {
+  return DataService.getCarteData();
 }
 
 /**
- * Ouvre le panneau de configuration
+ * Retourne le plan de priorisation
  */
-function openConfig() {
-  var html = HtmlService.createHtmlOutput('<p>Configuration à venir</p>')
-    .setWidth(400)
-    .setHeight(300);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Configuration');
+function getPlanRecrutement() {
+  return PriorisationService.genererPlan();
 }

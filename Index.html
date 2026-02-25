@@ -1,407 +1,466 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SDIS 66 — Carte Prévisionnelle Opérationnelle</title>
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin:0; padding:0; box-sizing:border-box; }
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #1a1a2e;
       color: #eee;
+      overflow: hidden;
     }
 
-    /* ── Header ── */
+    /* ── HEADER ── */
     #header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       background: linear-gradient(135deg, #c0392b, #e74c3c);
-      padding: 10px 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      z-index: 1000;
+      padding: 8px 20px;
+      z-index: 2000;
       position: relative;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3);
     }
-
-    #header h1 {
-      font-size: 1.2rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-
+    #header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: .3px; }
     #header .badge {
-      background: rgba(255,255,255,0.2);
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 0.8rem;
+      background: rgba(255,255,255,.2);
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: .75rem;
     }
 
-    /* ── Carte ── */
-    #map {
-      width: 100%;
-      height: calc(100vh - 50px);
-    }
+    /* ── CARTE ── */
+    #map { width: 100%; height: calc(100vh - 44px); }
 
-    /* ── Panneau latéral ── */
-    #sidebar {
-      position: absolute;
-      top: 60px;
-      right: 10px;
-      width: 320px;
-      max-height: calc(100vh - 80px);
-      background: rgba(26, 26, 46, 0.95);
-      border-radius: 12px;
-      padding: 16px;
-      overflow-y: auto;
-      z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      display: none;
-    }
-
-    #sidebar.active { display: block; }
-
-    #sidebar h2 {
+    /* ── LOADING ── */
+    #loading {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+      background: #1a1a2e; z-index: 9999;
       font-size: 1rem;
-      margin-bottom: 10px;
-      color: #e74c3c;
     }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      font-size: 0.85rem;
+    .spinner {
+      width: 36px; height: 36px;
+      border: 4px solid rgba(231,76,60,.3);
+      border-top-color: #e74c3c;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
     }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    .info-row .label { color: #999; }
-    .info-row .value { font-weight: 600; }
-
-    /* ── Légende ── */
+    /* ── LÉGENDE ── */
     .legend {
       position: absolute;
-      bottom: 20px;
-      left: 10px;
-      background: rgba(26, 26, 46, 0.9);
-      padding: 12px 16px;
-      border-radius: 10px;
-      z-index: 1000;
-      font-size: 0.8rem;
+      bottom: 20px; left: 10px;
+      background: rgba(26,26,46,.92);
+      padding: 14px 18px;
+      border-radius: 12px;
+      z-index: 2000;
+      font-size: .78rem;
+      line-height: 1.6;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    }
+    .legend strong { display: block; margin-bottom: 6px; font-size: .85rem; }
+    .legend-row { display: flex; align-items: center; gap: 8px; }
+    .legend-color {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,.5);
     }
 
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 4px 0;
-    }
-
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    /* ── Contrôles ── */
+    /* ── CONTRÔLES ── */
     .controls {
-      position: absolute;
-      top: 60px;
-      left: 10px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      position: absolute; top: 54px; left: 10px;
+      z-index: 2000;
+      display: flex; flex-direction: column; gap: 5px;
     }
-
     .ctrl-btn {
-      background: rgba(26, 26, 46, 0.9);
+      background: rgba(26,26,46,.9);
       color: #fff;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 8px 14px;
+      border: 1px solid rgba(255,255,255,.15);
+      padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
+      font-size: .78rem;
+      transition: all .2s;
     }
-
     .ctrl-btn:hover { background: #e74c3c; }
     .ctrl-btn.active { background: #c0392b; border-color: #e74c3c; }
 
-    /* ── Loading ── */
-    #loading {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #1a1a2e;
-      z-index: 9999;
-      font-size: 1.2rem;
-      flex-direction: column;
-      gap: 16px;
+    /* ── SIDEBAR ── */
+    #sidebar {
+      position: absolute;
+      top: 54px; right: 10px;
+      width: 340px;
+      max-height: calc(100vh - 74px);
+      background: rgba(26,26,46,.95);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-y: auto;
+      z-index: 2000;
+      box-shadow: 0 4px 20px rgba(0,0,0,.5);
+      display: none;
     }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(231,76,60,0.3);
-      border-top-color: #e74c3c;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+    #sidebar.visible { display: block; }
+    #sidebar h2 {
+      font-size: .95rem; margin-bottom: 8px; color: #e74c3c;
     }
+    .info-row {
+      display: flex; justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      font-size: .82rem;
+    }
+    .info-row .label { color: #999; }
+    .info-row .value { font-weight: 600; }
+    .taux-bar {
+      height: 8px; border-radius: 4px; margin-top: 8px;
+      background: #2c3e50; overflow: hidden;
+    }
+    .taux-fill {
+      height: 100%; border-radius: 4px;
+      transition: width .4s ease;
+    }
+    #sidebar .close-btn {
+      position: absolute; top: 8px; right: 12px;
+      background: none; border: none; color: #aaa;
+      font-size: 1.1rem; cursor: pointer;
+    }
+    #sidebar .close-btn:hover { color: #fff; }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── TOOLTIP pour marqueurs ── */
+    .leaflet-tooltip.centre-tooltip {
+      background: rgba(26,26,46,.9);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: .78rem;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .leaflet-tooltip.centre-tooltip::before { border-top-color: rgba(26,26,46,.9); }
+
+    /* ── MARKER label ── */
+    .marker-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-size: 10px;
+      font-weight: 700;
+      color: #2c3e50;
+      text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+      pointer-events: none;
+      margin-top: 2px;
+    }
   </style>
 </head>
-
 <body>
 
-  <!-- Loading -->
-  <div id="loading">
-    <div class="spinner"></div>
-    <span>Chargement de la carte…</span>
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Chargement de la carte…</span>
+</div>
+
+<!-- Header -->
+<div id="header">
+  <h1>🗺️ SDIS 66 — Carte Prévisionnelle Opérationnelle</h1>
+  <span class="badge" id="badge-info">Chargement…</span>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="ctrl-btn active" onclick="toggleGroupement('Nord',this)">🔵 Nord</button>
+  <button class="ctrl-btn active" onclick="toggleGroupement('Ouest',this)">🟣 Ouest</button>
+  <button class="ctrl-btn active" onclick="toggleGroupement('Sud',this)">🟠 Sud</button>
+  <button class="ctrl-btn" onclick="toggleLabels(this)" id="btnLabels">🏷️ Noms</button>
+</div>
+
+<!-- Légende -->
+<div class="legend">
+  <strong>Légende</strong>
+  <div class="legend-row">
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <defs>
+        <clipPath id="lg-l"><polygon points="0,0 28,28 0,28"/></clipPath>
+        <clipPath id="lg-r"><polygon points="0,0 28,0 28,28"/></clipPath>
+      </defs>
+      <circle cx="14" cy="14" r="12" fill="#27ae60" clip-path="url(#lg-l)"/>
+      <circle cx="14" cy="14" r="12" fill="#e67e22" clip-path="url(#lg-r)"/>
+      <circle cx="14" cy="14" r="12" fill="none" stroke="#fff" stroke-width="1.5"/>
+      <line x1="0" y1="0" x2="28" y2="28" stroke="#fff" stroke-width="1.5"/>
+    </svg>
+    <span>Actuel <span style="color:#27ae60">■</span> / Cible <span style="color:#e67e22">■</span></span>
   </div>
+  <div class="legend-row"><div class="legend-color" style="background:#3498db"></div> Groupement Nord</div>
+  <div class="legend-row"><div class="legend-color" style="background:#9b59b6"></div> Groupement Ouest</div>
+  <div class="legend-row"><div class="legend-color" style="background:#e67e22"></div> Groupement Sud</div>
+</div>
 
-  <!-- Header -->
-  <div id="header">
-    <h1>🗺️ SDIS 66 — Carte Prévisionnelle Opérationnelle</h1>
-    <span class="badge" id="timestamp">—</span>
-  </div>
+<!-- Sidebar -->
+<div id="sidebar">
+  <button class="close-btn" onclick="closeSidebar()">✕</button>
+  <h2 id="sb-title"></h2>
+  <div id="sb-content"></div>
+</div>
 
-  <!-- Carte -->
-  <div id="map"></div>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Contrôles de couches -->
-  <div class="controls">
-    <button class="ctrl-btn active" data-layer="casernes" onclick="toggleLayer('casernes', this)">🏛️ Casernes</button>
-    <button class="ctrl-btn active" data-layer="risques" onclick="toggleLayer('risques', this)">⚠️ Risques</button>
-    <button class="ctrl-btn active" data-layer="zones" onclick="toggleLayer('zones', this)">📐 Zones</button>
-    <button class="ctrl-btn" data-layer="moyens" onclick="toggleLayer('moyens', this)">🚒 Moyens</button>
-  </div>
+<script>
+/* ════════════════════════════════════════════════════════
+   ÉTAT GLOBAL
+   ════════════════════════════════════════════════════════ */
+var map;
+var markersPerGroupement = { Nord: [], Ouest: [], Sud: [] };
+var groupementVisible    = { Nord: true, Ouest: true, Sud: true };
+var allMarkers = [];
+var labelsVisible = false;
+var centresData = [];
 
-  <!-- Légende -->
-  <div class="legend">
-    <strong>Légende</strong>
-    <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div> CSP</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div> CS</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f1c40f"></div> CI</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div> Risque SEVESO</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div> Risque Inondation</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div> Risque Feu forêt</div>
-  </div>
+/* ════════════════════════════════════════════════════════
+   SVG — CERCLE COUPÉ EN DIAGONALE
+   Moitié gauche (bas-gauche) = vert = effectif actuel
+   Moitié droite (haut-droite) = orange = effectif cible
+   ════════════════════════════════════════════════════════ */
+function buildSplitSVG(actuel, cible, size) {
+  size = size || 44;
+  var half = size / 2;
+  var r    = half - 3;
 
-  <!-- Panneau latéral -->
-  <div id="sidebar">
-    <h2 id="sidebar-title">Détails</h2>
-    <div id="sidebar-content"></div>
-  </div>
+  // Couleur de la bordure selon groupement : on le passe pas ici,
+  // on utilise blanc pour garder la lisibilité
+  var uid = 'c' + Math.random().toString(36).substr(2, 6);
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  var greenColor  = '#27ae60';
+  var orangeColor = '#e67e22';
+  var grayColor   = '#7f8c8d';
 
-  <script>
-    // ── État global ──
-    var map, layers = {}, data = {};
+  // Si pas de cible définie, cercle gris
+  if (!cible || cible <= 0) {
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
+      + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="'+grayColor+'" opacity=".5" stroke="#fff" stroke-width="2"/>'
+      + '<text x="'+half+'" y="'+(half+4)+'" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">'
+      + actuel + '</text></svg>';
+  }
 
-    // ── Couleurs par type ──
-    var COLORS = {
-      CSP: '#e74c3c',
-      CS: '#e67e22',
-      CI: '#f1c40f',
-      'SEVESO': '#9b59b6',
-      'Inondation': '#3498db',
-      'Feu forêt': '#2ecc71',
-      default: '#95a5a6'
-    };
+  var taux = cible > 0 ? actuel / cible : 0;
+  // Vert plus ou moins saturé selon le taux
+  if (taux >= 1) greenColor = '#1e8449';
 
-    // ── Initialisation ──
-    function init() {
-      google.script.run
-        .withSuccessHandler(function (config) {
-          initMap(config);
-          loadData();
-        })
-        .withFailureHandler(function () {
-          // Fallback si pas de config
-          initMap({ center: { lat: 42.6887, lng: 2.8948 }, zoom: 10 });
-          loadData();
-        })
-        .getMapConfig();
-    }
+  var svg = '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
+    + '<defs>'
+    + '<clipPath id="L'+uid+'"><polygon points="0,0 '+size+','+size+' 0,'+size+'"/></clipPath>'
+    + '<clipPath id="R'+uid+'"><polygon points="0,0 '+size+',0 '+size+','+size+'"/></clipPath>'
+    + '</defs>'
+    // Moitié gauche = vert (actuel)
+    + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="'+greenColor+'" clip-path="url(#L'+uid+')"/>'
+    // Moitié droite = orange (cible)
+    + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="'+orangeColor+'" clip-path="url(#R'+uid+')"/>'
+    // Bordure
+    + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="none" stroke="#fff" stroke-width="2"/>'
+    // Diagonale
+    + '<line x1="0" y1="0" x2="'+size+'" y2="'+size+'" stroke="#fff" stroke-width="2"/>'
+    // Nombre gauche (actuel)
+    + '<text x="'+(half - r/2.2)+'" y="'+(half + 5)+'" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'
+    + actuel + '</text>'
+    // Nombre droite (cible)
+    + '<text x="'+(half + r/2.2)+'" y="'+(half + 1)+'" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'
+    + cible + '</text>'
+    + '</svg>';
 
-    function initMap(config) {
-      map = L.map('map', {
-        center: [config.center.lat, config.center.lng],
-        zoom: config.zoom || 10,
-        zoomControl: true
-      });
+  return svg;
+}
 
-      // Tuile OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors | SDIS 66',
-        maxZoom: 18
-      }).addTo(map);
+/* ════════════════════════════════════════════════════════
+   INITIALISATION
+   ════════════════════════════════════════════════════════ */
+function init() {
+  google.script.run
+    .withSuccessHandler(function(config) {
+      initMap(config);
+      chargerDonnees();
+    })
+    .withFailureHandler(function() {
+      initMap({ center:{lat:42.58, lng:2.55}, zoom:10 });
+      chargerDonnees();
+    })
+    .getMapConfig();
+}
 
-      // Groupes de couches
-      layers.casernes = L.layerGroup().addTo(map);
-      layers.risques = L.layerGroup().addTo(map);
-      layers.zones = L.layerGroup().addTo(map);
-      layers.moyens = L.layerGroup();
+function initMap(config) {
+  map = L.map('map', {
+    center: [config.center.lat, config.center.lng],
+    zoom: config.zoom || 10,
+    zoomControl: true
+  });
 
-      document.getElementById('loading').style.display = 'none';
-    }
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap | SDIS 66',
+    maxZoom: 18
+  }).addTo(map);
 
-    function loadData() {
-      google.script.run
-        .withSuccessHandler(function (result) {
-          data = result;
-          renderCasernes(result.casernes || []);
-          renderRisques(result.risques || []);
-          renderZones(result.zones || []);
-          document.getElementById('timestamp').textContent =
-            'MAJ : ' + new Date(result.timestamp).toLocaleString('fr-FR');
-        })
-        .withFailureHandler(function (err) {
-          console.error('Erreur chargement données:', err);
-        })
-        .getOperationalData();
-    }
+  document.getElementById('loading').style.display = 'none';
+}
 
-    // ── Rendu des casernes ──
-    function renderCasernes(casernes) {
-      casernes.forEach(function (c) {
-        if (!c.lat || !c.lng) return;
-        var color = COLORS[c.type] || COLORS.default;
-        var marker = L.circleMarker([c.lat, c.lng], {
-          radius: c.type === 'CSP' ? 10 : 7,
-          fillColor: color,
-          color: '#fff',
-          weight: 2,
-          fillOpacity: 0.9
-        });
-        marker.bindTooltip(c.nom + ' (' + c.type + ')');
-        marker.on('click', function () { showSidebar('caserne', c); });
-        layers.casernes.addLayer(marker);
-      });
-    }
+function chargerDonnees() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      centresData = data || [];
+      renderCentres(centresData);
 
-    // ── Rendu des risques ──
-    function renderRisques(risques) {
-      risques.forEach(function (r) {
-        if (!r.lat || !r.lng) return;
-        var color = COLORS[r.type] || COLORS.default;
-        var marker = L.circleMarker([r.lat, r.lng], {
-          radius: 6,
-          fillColor: color,
-          color: color,
-          weight: 1,
-          fillOpacity: 0.6
-        });
-        marker.bindTooltip('⚠️ ' + r.type + ' — ' + r.niveau);
-        marker.on('click', function () { showSidebar('risque', r); });
-        layers.risques.addLayer(marker);
+      var total = centresData.reduce(function(s,c){ return s + c.effectifActuel; }, 0);
+      document.getElementById('badge-info').textContent = total + ' ISP — ' + centresData.length + ' centres';
+    })
+    .withFailureHandler(function(err) {
+      console.error('Erreur chargement:', err);
+      document.getElementById('badge-info').textContent = 'Erreur chargement';
+    })
+    .getCarteData();
+}
 
-        // Rayon de danger
-        if (r.rayon > 0) {
-          var circle = L.circle([r.lat, r.lng], {
-            radius: r.rayon,
-            color: color,
-            fillColor: color,
-            fillOpacity: 0.1,
-            weight: 1,
-            dashArray: '5,5'
-          });
-          layers.risques.addLayer(circle);
-        }
-      });
-    }
+/* ════════════════════════════════════════════════════════
+   RENDU DES CENTRES
+   ════════════════════════════════════════════════════════ */
+function renderCentres(centres) {
+  centres.forEach(function(c) {
+    if (!c.lat || !c.lng) return;
 
-    // ── Rendu des zones ──
-    function renderZones(zones) {
-      zones.forEach(function (z) {
-        if (!z.polygone) return;
-        try {
-          var coords = JSON.parse(z.polygone);
-          var polygon = L.polygon(coords, {
-            color: z.couleur,
-            fillColor: z.couleur,
-            fillOpacity: 0.15,
-            weight: 2
-          });
-          polygon.bindTooltip(z.nom);
-          polygon.on('click', function () { showSidebar('zone', z); });
-          layers.zones.addLayer(polygon);
-        } catch (e) {
-          console.warn('Zone polygone invalide:', z.nom);
-        }
-      });
-    }
+    // Taille du cercle selon importance
+    var size = 44;
+    if (c.effectifCible >= 20) size = 52;
+    else if (c.effectifCible >= 10) size = 48;
+    else if (!c.effectifCible) size = 36;
 
-    // ── Toggle couche ──
-    function toggleLayer(name, btn) {
-      if (map.hasLayer(layers[name])) {
-        map.removeLayer(layers[name]);
-        btn.classList.remove('active');
-      } else {
-        map.addLayer(layers[name]);
-        btn.classList.add('active');
-      }
-    }
+    var svgHtml = buildSplitSVG(c.effectifActuel, c.effectifCible, size);
 
-    // ── Panneau latéral ──
-    function showSidebar(type, item) {
-      var sidebar = document.getElementById('sidebar');
-      var title = document.getElementById('sidebar-title');
-      var content = document.getElementById('sidebar-content');
-
-      var html = '';
-      if (type === 'caserne') {
-        title.textContent = '🏛️ ' + item.nom;
-        html = infoRow('Type', item.type)
-          + infoRow('Commune', item.commune)
-          + infoRow('Effectif', item.effectif)
-          + infoRow('Véhicules', item.vehicules);
-      } else if (type === 'risque') {
-        title.textContent = '⚠️ ' + item.type;
-        html = infoRow('Niveau', item.niveau)
-          + infoRow('Description', item.description)
-          + infoRow('Rayon', item.rayon ? item.rayon + ' m' : '—');
-      } else if (type === 'zone') {
-        title.textContent = '📐 ' + item.nom;
-        html = infoRow('Type', item.type)
-          + infoRow('Caserne principale', item.casernePrincipale);
-      }
-
-      content.innerHTML = html;
-      sidebar.classList.add('active');
-    }
-
-    function infoRow(label, value) {
-      return '<div class="info-row"><span class="label">' + label
-        + '</span><span class="value">' + (value || '—') + '</span></div>';
-    }
-
-    // Fermer sidebar en cliquant sur la carte
-    document.addEventListener('DOMContentLoaded', function () {
-      document.getElementById('map').addEventListener('click', function (e) {
-        if (e.target === e.currentTarget || e.target.classList.contains('leaflet-container')) {
-          document.getElementById('sidebar').classList.remove('active');
-        }
-      });
+    var icon = L.divIcon({
+      className: '',
+      html: svgHtml + '<div class="marker-label" style="display:none">' + c.nom + '</div>',
+      iconSize: [size, size + 16],
+      iconAnchor: [size / 2, size / 2]
     });
 
-    // ── Lancement ──
-    init();
-  </script>
+    var marker = L.marker([c.lat, c.lng], { icon: icon });
 
+    // Tooltip
+    var taux = c.effectifCible > 0
+      ? Math.round((c.effectifActuel / c.effectifCible) * 100) + '%'
+      : '—';
+    marker.bindTooltip(
+      '<strong>' + c.nom + '</strong> (' + c.groupement + ')<br>'
+      + 'Actuel : <b style="color:#27ae60">' + c.effectifActuel + '</b> · '
+      + 'Cible : <b style="color:#e67e22">' + (c.effectifCible || '—') + '</b> · '
+      + 'Taux : <b>' + taux + '</b>',
+      { className: 'centre-tooltip', direction: 'top', offset: [0, -size/2 + 4] }
+    );
+
+    // Clic → sidebar
+    marker.on('click', function() { showSidebar(c); });
+
+    marker.addTo(map);
+    marker._centreData = c;
+    allMarkers.push(marker);
+    if (markersPerGroupement[c.groupement]) {
+      markersPerGroupement[c.groupement].push(marker);
+    }
+  });
+}
+
+/* ════════════════════════════════════════════════════════
+   SIDEBAR DÉTAIL CENTRE
+   ════════════════════════════════════════════════════════ */
+function showSidebar(c) {
+  var sb = document.getElementById('sidebar');
+  document.getElementById('sb-title').textContent = '🏛️ ' + c.nom;
+
+  var taux = c.effectifCible > 0 ? Math.round((c.effectifActuel / c.effectifCible) * 100) : 0;
+  var ecart = c.effectifCible > 0 ? c.effectifCible - c.effectifActuel : 0;
+  var tauxColor = taux >= 100 ? '#27ae60' : taux >= 75 ? '#f39c12' : '#e74c3c';
+
+  var html = ''
+    + infoRow('Groupement', c.groupement)
+    + infoRow('Effectif actuel', '<span style="color:#27ae60;font-size:1.1em">' + c.effectifActuel + '</span>')
+    + infoRow('Effectif cible', '<span style="color:#e67e22;font-size:1.1em">' + (c.effectifCible || '—') + '</span>')
+    + infoRow('Taux de couverture', '<span style="color:'+tauxColor+';font-size:1.1em">' + taux + '%</span>');
+
+  if (ecart > 0) {
+    html += infoRow('Postes à pourvoir', '<span style="color:#e74c3c;font-weight:700">' + ecart + '</span>');
+  } else if (ecart <= 0 && c.effectifCible > 0) {
+    html += infoRow('Statut', '<span style="color:#27ae60">✅ Complet</span>');
+  }
+
+  // Barre de progression
+  html += '<div class="taux-bar"><div class="taux-fill" style="width:' + Math.min(taux, 100)
+    + '%;background:' + tauxColor + '"></div></div>';
+
+  // Coordonnées
+  html += '<div style="margin-top:12px;font-size:.72rem;color:#666">'
+    + '📍 ' + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) + '</div>';
+
+  document.getElementById('sb-content').innerHTML = html;
+  sb.classList.add('visible');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('visible');
+}
+
+function infoRow(label, value) {
+  return '<div class="info-row"><span class="label">' + label
+    + '</span><span class="value">' + value + '</span></div>';
+}
+
+/* ════════════════════════════════════════════════════════
+   CONTRÔLES
+   ════════════════════════════════════════════════════════ */
+function toggleGroupement(grp, btn) {
+  groupementVisible[grp] = !groupementVisible[grp];
+  btn.classList.toggle('active');
+
+  markersPerGroupement[grp].forEach(function(m) {
+    if (groupementVisible[grp]) {
+      m.addTo(map);
+    } else {
+      map.removeLayer(m);
+    }
+  });
+}
+
+function toggleLabels(btn) {
+  labelsVisible = !labelsVisible;
+  btn.classList.toggle('active');
+  var display = labelsVisible ? 'block' : 'none';
+  document.querySelectorAll('.marker-label').forEach(function(el) {
+    el.style.display = display;
+  });
+}
+
+// Fermer sidebar en cliquant sur la carte
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('map').addEventListener('click', function(e) {
+    if (e.target.classList.contains('leaflet-container') ||
+        e.target.classList.contains('leaflet-tile')) {
+      closeSidebar();
+    }
+  });
+});
+
+/* ════════════════════════════════════════════════════════
+   LANCEMENT
+   ════════════════════════════════════════════════════════ */
+init();
+</script>
 </body>
-
 </html>
