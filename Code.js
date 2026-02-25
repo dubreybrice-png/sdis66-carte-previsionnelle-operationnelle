@@ -21,12 +21,7 @@ function doGet() {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🗺️ Carte Opérationnelle')
-    .addItem('📋 Initialiser le classeur', 'initialiserClasseur')
-    .addItem('👥 Peupler les ISP (1ère fois)', 'peuplerISP')
-    .addSeparator()
-    .addItem('🔄 Tout actualiser', 'toutActualiser')
-    .addSeparator()
-    .addItem('🗺️ Ouvrir la carte', 'ouvrirCarte')
+    .addItem('️ Ouvrir la carte', 'ouvrirCarte')
     .addToUi();
 
   // Actualisation automatique à chaque ouverture du classeur
