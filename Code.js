@@ -29,9 +29,10 @@ function onOpen() {
     .addItem('🔄 Tout actualiser', 'toutActualiser')
     .addSeparator()
     .addItem('🗺️ Ouvrir la carte', 'ouvrirCarte')
-    .addSeparator()
-    .addItem('⚡ Activer mise à jour auto', 'installerTriggerOnEdit')
     .addToUi();
+
+  // Auto-installer le trigger si pas encore fait
+  _autoInstallerTrigger();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -99,27 +100,12 @@ function getPlanRecrutement() {
    ═══════════════════════════════════════════════════════ */
 
 /**
- * Simple trigger onEdit (fonctionne sans installation).
- * Détecte les modifications sur l'onglet ISP et lance la mise à jour.
+ * Trigger installable onEdit — se déclenche à chaque modification.
+ * Installé automatiquement par _autoInstallerTrigger().
+ * Recalcule Par Centre + Priorisation dès qu'on touche à l'onglet ISP
+ * ou à la colonne Effectif Cible de l'onglet Par Centre.
  */
-function onEdit(e) {
-  try {
-    if (!e || !e.range) return;
-    var sheetName = e.range.getSheet().getName();
-    // Réagir aux modifs sur l'onglet ISP ou sur la colonne Cible de Par Centre
-    if (sheetName === Config.SHEETS.ISP || sheetName === Config.SHEETS.PAR_CENTRE) {
-      _planifierMiseAJour();
-    }
-  } catch (err) {
-    // Simple trigger : on ignore silencieusement les erreurs d'auth
-  }
-}
-
-/**
- * Installable trigger pour onEdit — plus puissant (accès complet aux services).
- * Nécessite d'être installé une fois via le menu.
- */
-function onEditInstallable(e) {
+function onEditAuto(e) {
   try {
     if (!e || !e.range) return;
     var sheetName = e.range.getSheet().getName();
@@ -128,42 +114,29 @@ function onEditInstallable(e) {
       PriorisationService.actualiserPriorisation();
     }
   } catch (err) {
-    Logger.log('onEditInstallable error: ' + err.message);
+    Logger.log('onEditAuto error: ' + err.message);
   }
 }
 
 /**
- * Installe le trigger onEdit installable (à faire UNE seule fois).
- * Appelé via le menu "⚡ Activer mise à jour auto".
+ * Installe automatiquement le trigger onEdit s'il n'existe pas encore.
+ * Appelé à chaque onOpen() — ne crée pas de doublon.
  */
-function installerTriggerOnEdit() {
-  // Supprimer les anciens triggers onEditInstallable pour éviter les doublons
-  var triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(function (t) {
-    if (t.getHandlerFunction() === 'onEditInstallable') {
-      ScriptApp.deleteTrigger(t);
-    }
+function _autoInstallerTrigger() {
+  var found = false;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'onEditAuto') found = true;
   });
-
-  // Créer le nouveau trigger
-  ScriptApp.newTrigger('onEditInstallable')
-    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
-    .onEdit()
-    .create();
-
-  SpreadsheetApp.getActiveSpreadsheet().toast(
-    'Mise à jour automatique activée ✅\nLes onglets se recalculent à chaque modification.',
-    'Carte Opérationnelle', 5
-  );
-}
-
-/**
- * Anti-rebond pour le simple trigger (ne peut pas appeler les services complets,
- * mais met un flag pour signaler qu'un refresh est nécessaire).
- */
-function _planifierMiseAJour() {
-  var cache = CacheService.getScriptCache();
-  cache.put('needsRefresh', 'true', 10);
+  if (!found) {
+    ScriptApp.newTrigger('onEditAuto')
+      .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+      .onEdit()
+      .create();
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Mise à jour automatique activée ✅',
+      'Carte Opérationnelle', 3
+    );
+  }
 }
 
 /**
