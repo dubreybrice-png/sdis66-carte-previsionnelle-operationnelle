@@ -151,6 +151,7 @@ function init(){
 
 function initMap(cfg){
   map=L.map('map',{center:[cfg.center.lat,cfg.center.lng],zoom:cfg.zoom||10,zoomControl:true,maxBounds:PO_BOUNDS.pad(0.05),maxBoundsViscosity:1.0,minZoom:9});
+  map.createPane('heatPane');map.getPane('heatPane').style.zIndex=250;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM | SDIS 66',maxZoom:18,bounds:PO_BOUNDS}).addTo(map);
   document.getElementById('loading').style.display='none';
 }
@@ -215,21 +216,24 @@ function toggleHeatmap(btn){
   heatmapOn=!heatmapOn;btn.classList.toggle('active');
   if(heatmapOn){
     if(!heatLayer){
-      heatLayer=L.layerGroup();
+      heatLayer=L.canvas({pane:'heatPane',padding:0.5});
+      var heatCircles=[];
       centresData.forEach(function(c){
         if(!c.lat||!c.lng||!c.effectifCible)return;
         var deficit=Math.max(0,c.effectifCible-c.effectifActuel);
         var ratio=deficit/c.effectifCible;
-        var r=Math.round(231*ratio+39*(1-ratio));
-        var g=Math.round(76*ratio+174*(1-ratio));
-        var b=Math.round(60*ratio+96*(1-ratio));
-        var radius=5000+ratio*8000;
-        L.circle([c.lat,c.lng],{radius:radius,color:'rgba('+r+','+g+','+b+',.6)',fillColor:'rgb('+r+','+g+','+b+')',fillOpacity:0.35,weight:2,opacity:0.5}).addTo(heatLayer);
+        // Vivid: green(34,139,34) -> yellow(255,200,0) -> red(200,0,0)
+        var r,g,b;
+        if(ratio<=0.5){var t=ratio*2;r=Math.round(34+(255-34)*t);g=Math.round(139+(200-139)*t);b=Math.round(34+(0-34)*t);}
+        else{var t=(ratio-0.5)*2;r=Math.round(255+(200-255)*t);g=Math.round(200-200*t);b=0;}
+        var circle=L.circle([c.lat,c.lng],{radius:12000,color:'rgb('+r+','+g+','+b+')',fillColor:'rgb('+r+','+g+','+b+')',fillOpacity:0.6,weight:0,renderer:heatLayer,pane:'heatPane',interactive:false});
+        heatCircles.push(circle);
       });
+      heatLayer._circles=heatCircles;
     }
-    heatLayer.addTo(map);
+    heatLayer._circles.forEach(function(c){c.addTo(map);});
   } else {
-    if(heatLayer)map.removeLayer(heatLayer);
+    if(heatLayer&&heatLayer._circles)heatLayer._circles.forEach(function(c){map.removeLayer(c);});
   }
 }
 
