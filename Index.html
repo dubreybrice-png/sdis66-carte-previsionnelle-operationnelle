@@ -141,7 +141,6 @@ function init(){
 function initMap(cfg){
   map=L.map('map',{center:[cfg.center.lat,cfg.center.lng],zoom:cfg.zoom||10,zoomControl:true,maxBounds:PO_BOUNDS.pad(0.05),maxBoundsViscosity:1.0,minZoom:9});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM | SDIS 66',maxZoom:18,bounds:PO_BOUNDS}).addTo(map);
-  map.fitBounds(PO_BOUNDS);
   document.getElementById('loading').style.display='none';
 }
 
@@ -149,6 +148,10 @@ function chargerDonnees(){
   google.script.run.withSuccessHandler(function(data){
     centresData=data||[];
     renderCentres(centresData);
+    if(allMarkers.length>0){
+      var grp=L.featureGroup(allMarkers);
+      map.fitBounds(grp.getBounds().pad(0.08));
+    }
     var total=centresData.reduce(function(s,c){return s+c.effectifActuel;},0);
     document.getElementById('badge-info').textContent=total+' ISP — '+centresData.length+' centres';
   }).withFailureHandler(function(err){
