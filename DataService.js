@@ -55,7 +55,7 @@ var DataService = (function () {
         lng: c.lng,
         agents: [],
         effectifActuel: 0,
-        effectifCible: cibles[c.nom] || 0
+        effectifCible: cibles[c.nom] || c.cible || 0
       };
     });
 
