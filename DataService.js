@@ -59,10 +59,13 @@ var DataService = (function () {
       };
     });
 
-    // Affecter les agents (centre principal uniquement pour le comptage)
+    // Affecter les agents (principal ET secondaire comptent tous les deux)
     agents.forEach(function (a) {
       if (a.centrePrincipal && centres[a.centrePrincipal]) {
         centres[a.centrePrincipal].agents.push(a.nom);
+      }
+      if (a.centreSecondaire && centres[a.centreSecondaire]) {
+        centres[a.centreSecondaire].agents.push(a.nom);
       }
     });
 
