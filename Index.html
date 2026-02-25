@@ -224,7 +224,7 @@ function exportPDF(mode){
 
     var imgData=canvas.toDataURL('image/png');
     var mapY=14;
-    var mapH=mode==='complet'?pageH*0.55:pageH-18;
+    var mapH=pageH-18;
     var ratio=canvas.width/canvas.height;
     var mapW=Math.min(pageW-10,mapH*ratio);
     pdf.addImage(imgData,'PNG',(pageW-mapW)/2,mapY,mapW,mapH);
@@ -232,7 +232,8 @@ function exportPDF(mode){
     if(mode==='complet'){
       status.textContent='⏳ Récupération du tableau…';
       google.script.run.withSuccessHandler(function(tableau){
-        ajouterTableauPDF(pdf,tableau,mapY+mapH+4,pageW,pageH);
+        pdf.addPage();
+        ajouterTableauPDF(pdf,tableau,10,pageW,pageH);
         pdf.save('carte_previsionnelle_SDIS66.pdf');
         status.textContent='✅ PDF téléchargé !';
         setTimeout(closeExportModal,1500);
@@ -246,6 +247,13 @@ function exportPDF(mode){
 }
 
 function ajouterTableauPDF(pdf,tableau,startY,pageW,pageH){
+  // Page header
+  pdf.setFillColor(192,57,43);pdf.rect(0,0,pageW,12,'F');
+  pdf.setTextColor(255,255,255);pdf.setFontSize(13);pdf.setFont(undefined,'bold');
+  pdf.text('SDIS 66 — Tableau de projection des effectifs',pageW/2,8,{align:'center'});
+  var now=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  pdf.setFontSize(7);pdf.setFont(undefined,'normal');pdf.text('Généré le '+now,pageW-5,8,{align:'right'});
+
   var cols=[{h:'Centre',w:42,k:'nom'},{h:'Grpt',w:22,k:'groupement'},{h:'Actuel',w:20,k:'effectifActuel'},{h:'Cible',w:20,k:'effectifCible'},{h:'Taux',w:20,k:'taux'}];
   var totalW=cols.reduce(function(s,c){return s+c.w;},0);
   var startX=(pageW-totalW)/2;var rowH=4.5;var y=startY;
