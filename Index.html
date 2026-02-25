@@ -5,461 +5,292 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SDIS 66 — Carte Prévisionnelle Opérationnelle</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#1a1a2e;color:#eee;overflow:hidden}
 
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      overflow: hidden;
-    }
+    #header{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#c0392b,#e74c3c);padding:8px 16px;z-index:2000;position:relative;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+    #header h1{font-size:1rem;font-weight:600}
+    #header .badge{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:10px;font-size:.72rem}
 
-    /* ── HEADER ── */
-    #header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: linear-gradient(135deg, #c0392b, #e74c3c);
-      padding: 8px 20px;
-      z-index: 2000;
-      position: relative;
-      box-shadow: 0 2px 10px rgba(0,0,0,.3);
-    }
-    #header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: .3px; }
-    #header .badge {
-      background: rgba(255,255,255,.2);
-      padding: 3px 10px;
-      border-radius: 10px;
-      font-size: .75rem;
-    }
+    #map{width:100%;height:calc(100vh - 42px)}
 
-    /* ── CARTE ── */
-    #map { width: 100%; height: calc(100vh - 44px); }
+    #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#1a1a2e;z-index:9999;font-size:1rem}
+    .spinner{width:36px;height:36px;border:4px solid rgba(231,76,60,.3);border-top-color:#e74c3c;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── LOADING ── */
-    #loading {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column; gap: 12px;
-      background: #1a1a2e; z-index: 9999;
-      font-size: 1rem;
-    }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 4px solid rgba(231,76,60,.3);
-      border-top-color: #e74c3c;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    .legend{position:absolute;bottom:20px;left:10px;background:rgba(26,26,46,.92);padding:12px 16px;border-radius:12px;z-index:2000;font-size:.75rem;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+    .legend strong{display:block;margin-bottom:4px;font-size:.82rem}
+    .legend-row{display:flex;align-items:center;gap:7px}
+    .legend-color{width:13px;height:13px;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,.5)}
 
-    /* ── LÉGENDE ── */
-    .legend {
-      position: absolute;
-      bottom: 20px; left: 10px;
-      background: rgba(26,26,46,.92);
-      padding: 14px 18px;
-      border-radius: 12px;
-      z-index: 2000;
-      font-size: .78rem;
-      line-height: 1.6;
-      box-shadow: 0 4px 16px rgba(0,0,0,.4);
-    }
-    .legend strong { display: block; margin-bottom: 6px; font-size: .85rem; }
-    .legend-row { display: flex; align-items: center; gap: 8px; }
-    .legend-color {
-      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
-      border: 2px solid rgba(255,255,255,.5);
-    }
+    .controls{position:absolute;top:52px;left:10px;z-index:2000;display:flex;flex-direction:column;gap:4px}
+    .ctrl-btn{background:rgba(26,26,46,.9);color:#fff;border:1px solid rgba(255,255,255,.15);padding:5px 11px;border-radius:8px;cursor:pointer;font-size:.75rem;transition:all .2s;white-space:nowrap}
+    .ctrl-btn:hover{background:#e74c3c}
+    .ctrl-btn.active{background:#c0392b;border-color:#e74c3c}
 
-    /* ── CONTRÔLES ── */
-    .controls {
-      position: absolute; top: 54px; left: 10px;
-      z-index: 2000;
-      display: flex; flex-direction: column; gap: 5px;
-    }
-    .ctrl-btn {
-      background: rgba(26,26,46,.9);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.15);
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: .78rem;
-      transition: all .2s;
-    }
-    .ctrl-btn:hover { background: #e74c3c; }
-    .ctrl-btn.active { background: #c0392b; border-color: #e74c3c; }
+    #sidebar{position:absolute;top:52px;right:10px;width:320px;max-height:calc(100vh - 70px);background:rgba(26,26,46,.95);border-radius:12px;padding:14px;overflow-y:auto;z-index:2000;box-shadow:0 4px 20px rgba(0,0,0,.5);display:none}
+    #sidebar.visible{display:block}
+    #sidebar h2{font-size:.9rem;margin-bottom:6px;color:#e74c3c}
+    .info-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:.8rem}
+    .info-row .label{color:#999}.info-row .value{font-weight:600}
+    .taux-bar{height:7px;border-radius:4px;margin-top:6px;background:#2c3e50;overflow:hidden}
+    .taux-fill{height:100%;border-radius:4px;transition:width .4s ease}
+    #sidebar .close-btn{position:absolute;top:6px;right:10px;background:none;border:none;color:#aaa;font-size:1rem;cursor:pointer}
+    #sidebar .close-btn:hover{color:#fff}
 
-    /* ── SIDEBAR ── */
-    #sidebar {
-      position: absolute;
-      top: 54px; right: 10px;
-      width: 340px;
-      max-height: calc(100vh - 74px);
-      background: rgba(26,26,46,.95);
-      border-radius: 12px;
-      padding: 16px;
-      overflow-y: auto;
-      z-index: 2000;
-      box-shadow: 0 4px 20px rgba(0,0,0,.5);
-      display: none;
-    }
-    #sidebar.visible { display: block; }
-    #sidebar h2 {
-      font-size: .95rem; margin-bottom: 8px; color: #e74c3c;
-    }
-    .info-row {
-      display: flex; justify-content: space-between;
-      padding: 5px 0;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      font-size: .82rem;
-    }
-    .info-row .label { color: #999; }
-    .info-row .value { font-weight: 600; }
-    .taux-bar {
-      height: 8px; border-radius: 4px; margin-top: 8px;
-      background: #2c3e50; overflow: hidden;
-    }
-    .taux-fill {
-      height: 100%; border-radius: 4px;
-      transition: width .4s ease;
-    }
-    #sidebar .close-btn {
-      position: absolute; top: 8px; right: 12px;
-      background: none; border: none; color: #aaa;
-      font-size: 1.1rem; cursor: pointer;
-    }
-    #sidebar .close-btn:hover { color: #fff; }
+    .leaflet-tooltip.centre-tooltip{background:rgba(26,26,46,.9);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 9px;font-size:.75rem;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+    .leaflet-tooltip.centre-tooltip::before{border-top-color:rgba(26,26,46,.9)}
 
-    /* ── TOOLTIP pour marqueurs ── */
-    .leaflet-tooltip.centre-tooltip {
-      background: rgba(26,26,46,.9);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: .78rem;
-      font-weight: 500;
-      box-shadow: 0 2px 8px rgba(0,0,0,.3);
-    }
-    .leaflet-tooltip.centre-tooltip::before { border-top-color: rgba(26,26,46,.9); }
+    .marker-label{position:absolute;top:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;font-weight:700;color:#2c3e50;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none;margin-top:1px}
 
-    /* ── MARKER label ── */
-    .marker-label {
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      font-size: 10px;
-      font-weight: 700;
-      color: #2c3e50;
-      text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
-      pointer-events: none;
-      margin-top: 2px;
-    }
+    #export-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:5000;align-items:center;justify-content:center}
+    #export-modal.visible{display:flex}
+    #export-modal .modal-box{background:#1a1a2e;border-radius:14px;padding:24px;width:360px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+    #export-modal h3{margin-bottom:16px;color:#e74c3c;font-size:1.1rem}
+    .export-btn{display:block;width:100%;padding:12px;margin:8px 0;border:none;border-radius:8px;font-size:.9rem;cursor:pointer;font-weight:600;transition:all .2s}
+    .export-btn:hover{transform:scale(1.02)}
+    .export-btn.carte{background:#27ae60;color:#fff}
+    .export-btn.complet{background:#2980b9;color:#fff}
+    .export-btn.annuler{background:#555;color:#fff}
+    #export-status{margin-top:10px;font-size:.8rem;color:#f39c12;min-height:20px}
   </style>
 </head>
 <body>
 
-<!-- Loading -->
-<div id="loading">
-  <div class="spinner"></div>
-  <span>Chargement de la carte…</span>
-</div>
+<div id="loading"><div class="spinner"></div><span>Chargement de la carte…</span></div>
 
-<!-- Header -->
 <div id="header">
   <h1>🗺️ SDIS 66 — Carte Prévisionnelle Opérationnelle</h1>
   <span class="badge" id="badge-info">Chargement…</span>
 </div>
 
-<!-- Map -->
 <div id="map"></div>
 
-<!-- Controls -->
 <div class="controls">
   <button class="ctrl-btn active" onclick="toggleGroupement('Nord',this)">🔵 Nord</button>
   <button class="ctrl-btn active" onclick="toggleGroupement('Ouest',this)">🟣 Ouest</button>
   <button class="ctrl-btn active" onclick="toggleGroupement('Sud',this)">🟠 Sud</button>
   <button class="ctrl-btn" onclick="toggleLabels(this)" id="btnLabels">🏷️ Noms</button>
+  <button class="ctrl-btn" onclick="showExportModal()">📄 Export PDF</button>
 </div>
 
-<!-- Légende -->
 <div class="legend">
   <strong>Légende</strong>
   <div class="legend-row">
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <clipPath id="lg-l"><polygon points="0,0 28,28 0,28"/></clipPath>
-        <clipPath id="lg-r"><polygon points="0,0 28,0 28,28"/></clipPath>
-      </defs>
-      <circle cx="14" cy="14" r="12" fill="#27ae60" clip-path="url(#lg-l)"/>
-      <circle cx="14" cy="14" r="12" fill="#e67e22" clip-path="url(#lg-r)"/>
-      <circle cx="14" cy="14" r="12" fill="none" stroke="#fff" stroke-width="1.5"/>
-      <line x1="0" y1="0" x2="28" y2="28" stroke="#fff" stroke-width="1.5"/>
+    <svg width="26" height="26" viewBox="0 0 26 26">
+      <defs><clipPath id="lg-l"><polygon points="0,0 26,26 0,26"/></clipPath><clipPath id="lg-r"><polygon points="0,0 26,0 26,26"/></clipPath></defs>
+      <circle cx="13" cy="13" r="11" fill="#27ae60" clip-path="url(#lg-l)"/>
+      <circle cx="13" cy="13" r="11" fill="#e67e22" clip-path="url(#lg-r)"/>
+      <circle cx="13" cy="13" r="11" fill="none" stroke="#fff" stroke-width="1.5"/>
+      <line x1="0" y1="0" x2="26" y2="26" stroke="#fff" stroke-width="1.5"/>
     </svg>
     <span>Actuel <span style="color:#27ae60">■</span> / Cible <span style="color:#e67e22">■</span></span>
   </div>
-  <div class="legend-row"><div class="legend-color" style="background:#3498db"></div> Groupement Nord</div>
-  <div class="legend-row"><div class="legend-color" style="background:#9b59b6"></div> Groupement Ouest</div>
-  <div class="legend-row"><div class="legend-color" style="background:#e67e22"></div> Groupement Sud</div>
+  <div class="legend-row"><div class="legend-color" style="background:#3498db"></div> Grpt Nord</div>
+  <div class="legend-row"><div class="legend-color" style="background:#9b59b6"></div> Grpt Ouest</div>
+  <div class="legend-row"><div class="legend-color" style="background:#e67e22"></div> Grpt Sud</div>
 </div>
 
-<!-- Sidebar -->
 <div id="sidebar">
   <button class="close-btn" onclick="closeSidebar()">✕</button>
   <h2 id="sb-title"></h2>
   <div id="sb-content"></div>
 </div>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div id="export-modal">
+  <div class="modal-box">
+    <h3>📄 Export PDF</h3>
+    <button class="export-btn carte" onclick="exportPDF('carte')">🗺️ Carte seule</button>
+    <button class="export-btn complet" onclick="exportPDF('complet')">🗺️ + 📊 Carte + Tableau</button>
+    <button class="export-btn annuler" onclick="closeExportModal()">Annuler</button>
+    <div id="export-status"></div>
+  </div>
+</div>
 
 <script>
-/* ════════════════════════════════════════════════════════
-   ÉTAT GLOBAL
-   ════════════════════════════════════════════════════════ */
 var map;
-var markersPerGroupement = { Nord: [], Ouest: [], Sud: [] };
-var groupementVisible    = { Nord: true, Ouest: true, Sud: true };
+var markersPerGroupement = {Nord:[],Ouest:[],Sud:[]};
+var groupementVisible = {Nord:true,Ouest:true,Sud:true};
 var allMarkers = [];
 var labelsVisible = false;
 var centresData = [];
 
-/* ════════════════════════════════════════════════════════
-   SVG — CERCLE COUPÉ EN DIAGONALE
-   Moitié gauche (bas-gauche) = vert = effectif actuel
-   Moitié droite (haut-droite) = orange = effectif cible
-   ════════════════════════════════════════════════════════ */
-function buildSplitSVG(actuel, cible, size) {
-  size = size || 44;
-  var half = size / 2;
-  var r    = half - 3;
+var PO_BOUNDS = L.latLngBounds(L.latLng(42.33,1.72), L.latLng(42.92,3.18));
 
-  // Couleur de la bordure selon groupement : on le passe pas ici,
-  // on utilise blanc pour garder la lisibilité
-  var uid = 'c' + Math.random().toString(36).substr(2, 6);
-
-  var greenColor  = '#27ae60';
-  var orangeColor = '#e67e22';
-  var grayColor   = '#7f8c8d';
-
-  // Si pas de cible définie, cercle gris
-  if (!cible || cible <= 0) {
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
-      + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="'+grayColor+'" opacity=".5" stroke="#fff" stroke-width="2"/>'
-      + '<text x="'+half+'" y="'+(half+4)+'" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">'
-      + actuel + '</text></svg>';
+function buildSplitSVG(actuel,cible,size){
+  size=size||44;var h=size/2,r=h-3;
+  var uid='c'+Math.random().toString(36).substr(2,6);
+  var green='#27ae60',orange='#e67e22',gray='#7f8c8d';
+  if(!cible||cible<=0){
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'"><circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="'+gray+'" opacity=".5" stroke="#fff" stroke-width="2"/><text x="'+h+'" y="'+(h+4)+'" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">'+actuel+'</text></svg>';
   }
-
-  var taux = cible > 0 ? actuel / cible : 0;
-  // Vert plus ou moins saturé selon le taux
-  if (taux >= 1) greenColor = '#1e8449';
-
-  var svg = '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
-    + '<defs>'
-    + '<clipPath id="L'+uid+'"><polygon points="0,0 '+size+','+size+' 0,'+size+'"/></clipPath>'
-    + '<clipPath id="R'+uid+'"><polygon points="0,0 '+size+',0 '+size+','+size+'"/></clipPath>'
-    + '</defs>'
-    // Moitié gauche = vert (actuel)
-    + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="'+greenColor+'" clip-path="url(#L'+uid+')"/>'
-    // Moitié droite = orange (cible)
-    + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="'+orangeColor+'" clip-path="url(#R'+uid+')"/>'
-    // Bordure
-    + '<circle cx="'+half+'" cy="'+half+'" r="'+r+'" fill="none" stroke="#fff" stroke-width="2"/>'
-    // Diagonale
-    + '<line x1="0" y1="0" x2="'+size+'" y2="'+size+'" stroke="#fff" stroke-width="2"/>'
-    // Nombre gauche (actuel)
-    + '<text x="'+(half - r/2.2)+'" y="'+(half + 5)+'" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'
-    + actuel + '</text>'
-    // Nombre droite (cible)
-    + '<text x="'+(half + r/2.2)+'" y="'+(half + 1)+'" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'
-    + cible + '</text>'
-    + '</svg>';
-
-  return svg;
+  if(actuel/cible>=1)green='#1e8449';
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'"><defs><clipPath id="L'+uid+'"><polygon points="0,0 '+size+','+size+' 0,'+size+'"/></clipPath><clipPath id="R'+uid+'"><polygon points="0,0 '+size+',0 '+size+','+size+'"/></clipPath></defs><circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="'+green+'" clip-path="url(#L'+uid+')"/><circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="'+orange+'" clip-path="url(#R'+uid+')"/><circle cx="'+h+'" cy="'+h+'" r="'+r+'" fill="none" stroke="#fff" stroke-width="2"/><line x1="0" y1="0" x2="'+size+'" y2="'+size+'" stroke="#fff" stroke-width="2"/><text x="'+(h-r/2.2)+'" y="'+(h+5)+'" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'+actuel+'</text><text x="'+(h+r/2.2)+'" y="'+(h+1)+'" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'+cible+'</text></svg>';
 }
 
-/* ════════════════════════════════════════════════════════
-   INITIALISATION
-   ════════════════════════════════════════════════════════ */
-function init() {
-  google.script.run
-    .withSuccessHandler(function(config) {
-      initMap(config);
-      chargerDonnees();
-    })
-    .withFailureHandler(function() {
-      initMap({ center:{lat:42.58, lng:2.55}, zoom:10 });
-      chargerDonnees();
-    })
+function init(){
+  google.script.run.withSuccessHandler(function(cfg){initMap(cfg);chargerDonnees();})
+    .withFailureHandler(function(){initMap({center:{lat:42.58,lng:2.55},zoom:10});chargerDonnees();})
     .getMapConfig();
 }
 
-function initMap(config) {
-  map = L.map('map', {
-    center: [config.center.lat, config.center.lng],
-    zoom: config.zoom || 10,
-    zoomControl: true
-  });
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap | SDIS 66',
-    maxZoom: 18
-  }).addTo(map);
-
-  document.getElementById('loading').style.display = 'none';
+function initMap(cfg){
+  map=L.map('map',{center:[cfg.center.lat,cfg.center.lng],zoom:cfg.zoom||10,zoomControl:true,maxBounds:PO_BOUNDS.pad(0.05),maxBoundsViscosity:1.0,minZoom:9});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM | SDIS 66',maxZoom:18,bounds:PO_BOUNDS}).addTo(map);
+  map.fitBounds(PO_BOUNDS);
+  document.getElementById('loading').style.display='none';
 }
 
-function chargerDonnees() {
-  google.script.run
-    .withSuccessHandler(function(data) {
-      centresData = data || [];
-      renderCentres(centresData);
-
-      var total = centresData.reduce(function(s,c){ return s + c.effectifActuel; }, 0);
-      document.getElementById('badge-info').textContent = total + ' ISP — ' + centresData.length + ' centres';
-    })
-    .withFailureHandler(function(err) {
-      console.error('Erreur chargement:', err);
-      document.getElementById('badge-info').textContent = 'Erreur chargement';
-    })
-    .getCarteData();
+function chargerDonnees(){
+  google.script.run.withSuccessHandler(function(data){
+    centresData=data||[];
+    renderCentres(centresData);
+    var total=centresData.reduce(function(s,c){return s+c.effectifActuel;},0);
+    document.getElementById('badge-info').textContent=total+' ISP — '+centresData.length+' centres';
+  }).withFailureHandler(function(err){
+    console.error('Erreur:',err);
+    document.getElementById('badge-info').textContent='Erreur';
+  }).getCarteData();
 }
 
-/* ════════════════════════════════════════════════════════
-   RENDU DES CENTRES
-   ════════════════════════════════════════════════════════ */
-function renderCentres(centres) {
-  centres.forEach(function(c) {
-    if (!c.lat || !c.lng) return;
-
-    // Taille du cercle selon importance
-    var size = 44;
-    if (c.effectifCible >= 20) size = 52;
-    else if (c.effectifCible >= 10) size = 48;
-    else if (!c.effectifCible) size = 36;
-
-    var svgHtml = buildSplitSVG(c.effectifActuel, c.effectifCible, size);
-
-    var icon = L.divIcon({
-      className: '',
-      html: svgHtml + '<div class="marker-label" style="display:none">' + c.nom + '</div>',
-      iconSize: [size, size + 16],
-      iconAnchor: [size / 2, size / 2]
-    });
-
-    var marker = L.marker([c.lat, c.lng], { icon: icon });
-
-    // Tooltip
-    var taux = c.effectifCible > 0
-      ? Math.round((c.effectifActuel / c.effectifCible) * 100) + '%'
-      : '—';
-    marker.bindTooltip(
-      '<strong>' + c.nom + '</strong> (' + c.groupement + ')<br>'
-      + 'Actuel : <b style="color:#27ae60">' + c.effectifActuel + '</b> · '
-      + 'Cible : <b style="color:#e67e22">' + (c.effectifCible || '—') + '</b> · '
-      + 'Taux : <b>' + taux + '</b>',
-      { className: 'centre-tooltip', direction: 'top', offset: [0, -size/2 + 4] }
-    );
-
-    // Clic → sidebar
-    marker.on('click', function() { showSidebar(c); });
-
-    marker.addTo(map);
-    marker._centreData = c;
-    allMarkers.push(marker);
-    if (markersPerGroupement[c.groupement]) {
-      markersPerGroupement[c.groupement].push(marker);
-    }
+function renderCentres(centres){
+  centres.forEach(function(c){
+    if(!c.lat||!c.lng)return;
+    var size=44;
+    if(c.effectifCible>=20)size=52;else if(c.effectifCible>=10)size=48;else if(!c.effectifCible)size=36;
+    var icon=L.divIcon({className:'',html:buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label" style="display:none">'+c.nom+'</div>',iconSize:[size,size+16],iconAnchor:[size/2,size/2]});
+    var m=L.marker([c.lat,c.lng],{icon:icon});
+    var taux=c.effectifCible>0?Math.round((c.effectifActuel/c.effectifCible)*100)+'%':'—';
+    m.bindTooltip('<strong>'+c.nom+'</strong> ('+c.groupement+')<br>Actuel: <b style="color:#27ae60">'+c.effectifActuel+'</b> · Cible: <b style="color:#e67e22">'+(c.effectifCible||'—')+'</b> · Taux: <b>'+taux+'</b>',{className:'centre-tooltip',direction:'top',offset:[0,-size/2+4]});
+    m.on('click',function(){showSidebar(c);});
+    m.addTo(map);m._centreData=c;allMarkers.push(m);
+    if(markersPerGroupement[c.groupement])markersPerGroupement[c.groupement].push(m);
   });
 }
 
-/* ════════════════════════════════════════════════════════
-   SIDEBAR DÉTAIL CENTRE
-   ════════════════════════════════════════════════════════ */
-function showSidebar(c) {
-  var sb = document.getElementById('sidebar');
-  document.getElementById('sb-title').textContent = '🏛️ ' + c.nom;
-
-  var taux = c.effectifCible > 0 ? Math.round((c.effectifActuel / c.effectifCible) * 100) : 0;
-  var ecart = c.effectifCible > 0 ? c.effectifCible - c.effectifActuel : 0;
-  var tauxColor = taux >= 100 ? '#27ae60' : taux >= 75 ? '#f39c12' : '#e74c3c';
-
-  var html = ''
-    + infoRow('Groupement', c.groupement)
-    + infoRow('Effectif actuel', '<span style="color:#27ae60;font-size:1.1em">' + c.effectifActuel + '</span>')
-    + infoRow('Effectif cible', '<span style="color:#e67e22;font-size:1.1em">' + (c.effectifCible || '—') + '</span>')
-    + infoRow('Taux de couverture', '<span style="color:'+tauxColor+';font-size:1.1em">' + taux + '%</span>');
-
-  if (ecart > 0) {
-    html += infoRow('Postes à pourvoir', '<span style="color:#e74c3c;font-weight:700">' + ecart + '</span>');
-  } else if (ecart <= 0 && c.effectifCible > 0) {
-    html += infoRow('Statut', '<span style="color:#27ae60">✅ Complet</span>');
-  }
-
-  // Barre de progression
-  html += '<div class="taux-bar"><div class="taux-fill" style="width:' + Math.min(taux, 100)
-    + '%;background:' + tauxColor + '"></div></div>';
-
-  // Coordonnées
-  html += '<div style="margin-top:12px;font-size:.72rem;color:#666">'
-    + '📍 ' + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) + '</div>';
-
-  document.getElementById('sb-content').innerHTML = html;
+function showSidebar(c){
+  var sb=document.getElementById('sidebar');
+  document.getElementById('sb-title').textContent='🏛️ '+c.nom;
+  var taux=c.effectifCible>0?Math.round((c.effectifActuel/c.effectifCible)*100):0;
+  var ecart=c.effectifCible>0?c.effectifCible-c.effectifActuel:0;
+  var tc=taux>=100?'#27ae60':taux>=75?'#f39c12':'#e74c3c';
+  var html=infoRow('Groupement',c.groupement)+infoRow('Effectif actuel','<span style="color:#27ae60;font-size:1.1em">'+c.effectifActuel+'</span>')+infoRow('Effectif cible','<span style="color:#e67e22;font-size:1.1em">'+(c.effectifCible||'—')+'</span>')+infoRow('Taux','<span style="color:'+tc+';font-size:1.1em">'+taux+'%</span>');
+  if(ecart>0)html+=infoRow('À pourvoir','<span style="color:#e74c3c;font-weight:700">'+ecart+'</span>');
+  else if(c.effectifCible>0)html+=infoRow('Statut','<span style="color:#27ae60">✅ Complet</span>');
+  html+='<div class="taux-bar"><div class="taux-fill" style="width:'+Math.min(taux,100)+'%;background:'+tc+'"></div></div>';
+  document.getElementById('sb-content').innerHTML=html;
   sb.classList.add('visible');
 }
+function closeSidebar(){document.getElementById('sidebar').classList.remove('visible');}
+function infoRow(l,v){return '<div class="info-row"><span class="label">'+l+'</span><span class="value">'+v+'</span></div>';}
 
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('visible');
+function toggleGroupement(grp,btn){
+  groupementVisible[grp]=!groupementVisible[grp];btn.classList.toggle('active');
+  markersPerGroupement[grp].forEach(function(m){groupementVisible[grp]?m.addTo(map):map.removeLayer(m);});
+}
+function toggleLabels(btn){
+  labelsVisible=!labelsVisible;btn.classList.toggle('active');
+  var d=labelsVisible?'block':'none';
+  document.querySelectorAll('.marker-label').forEach(function(el){el.style.display=d;});
 }
 
-function infoRow(label, value) {
-  return '<div class="info-row"><span class="label">' + label
-    + '</span><span class="value">' + value + '</span></div>';
-}
+/* ═══ EXPORT PDF ═══ */
+function showExportModal(){document.getElementById('export-modal').classList.add('visible');}
+function closeExportModal(){document.getElementById('export-modal').classList.remove('visible');document.getElementById('export-status').textContent='';}
 
-/* ════════════════════════════════════════════════════════
-   CONTRÔLES
-   ════════════════════════════════════════════════════════ */
-function toggleGroupement(grp, btn) {
-  groupementVisible[grp] = !groupementVisible[grp];
-  btn.classList.toggle('active');
+function exportPDF(mode){
+  var status=document.getElementById('export-status');
+  status.textContent='⏳ Génération en cours…';
+  var mapEl=document.getElementById('map');
+  html2canvas(mapEl,{useCORS:true,scale:2,logging:false,backgroundColor:'#f0f0f0'}).then(function(canvas){
+    var jsPDF=window.jspdf.jsPDF;
+    var pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    var pageW=pdf.internal.pageSize.getWidth();
+    var pageH=pdf.internal.pageSize.getHeight();
 
-  markersPerGroupement[grp].forEach(function(m) {
-    if (groupementVisible[grp]) {
-      m.addTo(map);
+    pdf.setFillColor(192,57,43);pdf.rect(0,0,pageW,12,'F');
+    pdf.setTextColor(255,255,255);pdf.setFontSize(13);pdf.setFont(undefined,'bold');
+    pdf.text('SDIS 66 — Carte Prévisionnelle Opérationnelle',pageW/2,8,{align:'center'});
+    pdf.setFontSize(7);pdf.setFont(undefined,'normal');
+    var now=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    pdf.text('Généré le '+now,pageW-5,8,{align:'right'});
+
+    var imgData=canvas.toDataURL('image/png');
+    var mapY=14;
+    var mapH=mode==='complet'?pageH*0.55:pageH-18;
+    var ratio=canvas.width/canvas.height;
+    var mapW=Math.min(pageW-10,mapH*ratio);
+    pdf.addImage(imgData,'PNG',(pageW-mapW)/2,mapY,mapW,mapH);
+
+    if(mode==='complet'){
+      status.textContent='⏳ Récupération du tableau…';
+      google.script.run.withSuccessHandler(function(tableau){
+        ajouterTableauPDF(pdf,tableau,mapY+mapH+4,pageW,pageH);
+        pdf.save('carte_previsionnelle_SDIS66.pdf');
+        status.textContent='✅ PDF téléchargé !';
+        setTimeout(closeExportModal,1500);
+      }).withFailureHandler(function(err){status.textContent='❌ Erreur: '+err;}).getTableauProjection();
     } else {
-      map.removeLayer(m);
+      pdf.save('carte_previsionnelle_SDIS66.pdf');
+      status.textContent='✅ PDF téléchargé !';
+      setTimeout(closeExportModal,1500);
     }
-  });
+  }).catch(function(err){status.textContent='❌ Erreur: '+err.message;});
 }
 
-function toggleLabels(btn) {
-  labelsVisible = !labelsVisible;
-  btn.classList.toggle('active');
-  var display = labelsVisible ? 'block' : 'none';
-  document.querySelectorAll('.marker-label').forEach(function(el) {
-    el.style.display = display;
-  });
+function ajouterTableauPDF(pdf,tableau,startY,pageW,pageH){
+  var cols=[{h:'Centre',w:42,k:'nom'},{h:'Grpt',w:22,k:'groupement'},{h:'Actuel',w:20,k:'effectifActuel'},{h:'Cible',w:20,k:'effectifCible'},{h:'Taux',w:20,k:'taux'}];
+  var totalW=cols.reduce(function(s,c){return s+c.w;},0);
+  var startX=(pageW-totalW)/2;var rowH=4.5;var y=startY;
+
+  pdf.setFontSize(9);pdf.setFont(undefined,'bold');pdf.setTextColor(192,57,43);
+  pdf.text('Tableau de projection des effectifs',pageW/2,y,{align:'center'});y+=5;
+
+  pdf.setFillColor(44,62,80);pdf.rect(startX,y,totalW,rowH+1,'F');
+  pdf.setTextColor(255,255,255);pdf.setFontSize(7);
+  var x=startX;cols.forEach(function(col){pdf.text(col.h,x+col.w/2,y+3.5,{align:'center'});x+=col.w;});y+=rowH+1;
+
+  var ordreGrp=['Nord','Ouest','Sud'];
+  tableau.sort(function(a,b){var ga=ordreGrp.indexOf(a.groupement),gb=ordreGrp.indexOf(b.groupement);if(ga!==gb)return ga-gb;return a.nom.localeCompare(b.nom);});
+
+  pdf.setFont(undefined,'normal');var currentGrp='';
+  for(var i=0;i<tableau.length;i++){
+    var row=tableau[i];
+    if(y+rowH>pageH-5){pdf.addPage();y=10;}
+    if(row.groupement!==currentGrp){
+      currentGrp=row.groupement;
+      pdf.setFillColor(52,73,94);pdf.rect(startX,y,totalW,rowH,'F');
+      pdf.setTextColor(255,255,255);pdf.setFontSize(7);pdf.setFont(undefined,'bold');
+      pdf.text('GROUPEMENT '+currentGrp.toUpperCase(),startX+2,y+3.2);
+      pdf.setFont(undefined,'normal');y+=rowH;
+    }
+    if(i%2===0){pdf.setFillColor(248,249,250);pdf.rect(startX,y,totalW,rowH,'F');}
+    pdf.setFontSize(6.5);x=startX;
+    cols.forEach(function(col){
+      var val=String(row[col.k]);if(col.k==='taux')val+='%';
+      if(col.k==='effectifActuel')pdf.setTextColor(39,174,96);
+      else if(col.k==='effectifCible')pdf.setTextColor(230,126,34);
+      else if(col.k==='taux'){var t=row.taux;if(t>=100)pdf.setTextColor(39,174,96);else if(t>=75)pdf.setTextColor(243,156,18);else pdf.setTextColor(231,76,60);}
+      else pdf.setTextColor(44,62,80);
+      var align=(col.k==='nom'||col.k==='groupement')?'left':'center';
+      var tx=align==='left'?x+1.5:x+col.w/2;
+      pdf.text(val,tx,y+3.2,{align:align});x+=col.w;
+    });
+    y+=rowH;
+  }
+  pdf.setDrawColor(200,200,200);pdf.rect(startX,startY+5,totalW,y-startY-5);
 }
 
-// Fermer sidebar en cliquant sur la carte
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('map').addEventListener('click', function(e) {
-    if (e.target.classList.contains('leaflet-container') ||
-        e.target.classList.contains('leaflet-tile')) {
-      closeSidebar();
-    }
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('map').addEventListener('click',function(e){
+    if(e.target.classList.contains('leaflet-container')||e.target.classList.contains('leaflet-tile'))closeSidebar();
   });
 });
 
-/* ════════════════════════════════════════════════════════
-   LANCEMENT
-   ════════════════════════════════════════════════════════ */
 init();
 </script>
 </body>

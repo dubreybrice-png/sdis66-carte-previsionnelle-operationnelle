@@ -64,6 +64,7 @@ var Config = (function () {
 
     // ─── GROUPEMENT SUD ───
     { id: 'pnord',                nom: 'Perpignan Nord',             groupement: 'Sud',   lat: 42.7100, lng: 2.8950 },
+    { id: 'pouest',               nom: 'Perpignan Ouest',            groupement: 'Sud',   lat: 42.6980, lng: 2.8530 },
     { id: 'psud',                 nom: 'Perpignan Sud',              groupement: 'Sud',   lat: 42.6850, lng: 2.8900 },
     { id: 'riberal',              nom: 'Ribéral',                    groupement: 'Sud',   lat: 42.6755, lng: 2.8345 },
     { id: 'les-aspres',           nom: 'Les Aspres',                 groupement: 'Sud',   lat: 42.6400, lng: 2.7900 },
