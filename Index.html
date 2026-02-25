@@ -46,6 +46,8 @@
     .leaflet-tooltip.centre-tooltip::before{border-top-color:rgba(26,26,46,.9)}
 
     .marker-label{position:absolute;top:100%;left:50%;transform:translate(-50%,-4px);white-space:nowrap;font-size:9px;font-weight:700;color:#2c3e50;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none;margin-top:0}
+    .heat-circle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;opacity:0;transition:opacity .3s}
+    .heatmap-on .heat-circle{opacity:.55}
 
     #export-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:5000;align-items:center;justify-content:center}
     #export-modal.visible{display:flex}
@@ -75,6 +77,7 @@
   <button class="ctrl-btn active" onclick="toggleGroupement('Ouest',this)">🟣 Ouest</button>
   <button class="ctrl-btn active" onclick="toggleGroupement('Sud',this)">🟠 Sud</button>
   <button class="ctrl-btn active" onclick="toggleLabels(this)" id="btnLabels">🏷️ Noms</button>
+  <button class="ctrl-btn" onclick="toggleHeatmap(this)" id="btnHeat">🔥 Chaleur</button>
   <button class="ctrl-btn" onclick="showExportModal()">📄 Export PDF</button>
 </div>
 
@@ -93,6 +96,7 @@
   <div class="legend-row"><div class="legend-color" style="background:#3498db"></div> Grpt Nord</div>
   <div class="legend-row"><div class="legend-color" style="background:#9b59b6"></div> Grpt Ouest</div>
   <div class="legend-row"><div class="legend-color" style="background:#e67e22"></div> Grpt Sud</div>
+  <div class="legend-row"><div class="legend-color" style="background:linear-gradient(90deg,#27ae60,#f1c40f,#e74c3c);border-radius:3px"></div> Chaleur (déficit)</div>
 </div>
 
 <div id="sidebar">
@@ -117,6 +121,7 @@ var markersPerGroupement = {Nord:[],Ouest:[],Sud:[]};
 var groupementVisible = {Nord:true,Ouest:true,Sud:true};
 var allMarkers = [];
 var labelsVisible = true;
+var heatmapOn = false;
 var centresData = [];
 
 var PO_BOUNDS = L.latLngBounds(L.latLng(42.33,1.72), L.latLng(42.92,3.18));
@@ -165,7 +170,13 @@ function renderCentres(centres){
     if(!c.lat||!c.lng)return;
     var size=44;
     if(c.effectifCible>=20)size=52;else if(c.effectifCible>=10)size=48;else if(!c.effectifCible)size=36;
-    var icon=L.divIcon({className:'',html:buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label">'+c.nom+'</div>',iconSize:[size,size+10],iconAnchor:[size/2,size/2]});
+    var deficit=c.effectifCible>0?Math.max(0,c.effectifCible-c.effectifActuel):0;
+    var maxDef=c.effectifCible>0?c.effectifCible:1;
+    var ratio=deficit/maxDef;
+    var hR=Math.round(220*ratio),hG=Math.round(220*(1-ratio)),hB=30;
+    var hSize=size+20+Math.round(ratio*40);
+    var heatDiv='<div class="heat-circle" style="width:'+hSize+'px;height:'+hSize+'px;background:radial-gradient(circle,rgba('+hR+','+hG+','+hB+',.7) 0%,rgba('+hR+','+hG+','+hB+',0) 70%)"></div>';
+    var icon=L.divIcon({className:''+(heatmapOn?' heatmap-on':''),html:heatDiv+buildSplitSVG(c.effectifActuel,c.effectifCible,size)+'<div class="marker-label">'+c.nom+'</div>',iconSize:[size,size+10],iconAnchor:[size/2,size/2]});
     var m=L.marker([c.lat,c.lng],{icon:icon});
     var taux=c.effectifCible>0?Math.round((c.effectifActuel/c.effectifCible)*100)+'%':'—';
     m.bindTooltip('<strong>'+c.nom+'</strong> ('+c.groupement+')<br>Actuel: <b style="color:#27ae60">'+c.effectifActuel+'</b> · Cible: <b style="color:#e67e22">'+(c.effectifCible||'—')+'</b> · Taux: <b>'+taux+'</b>',{className:'centre-tooltip',direction:'top',offset:[0,-size/2+4]});
@@ -199,6 +210,12 @@ function toggleLabels(btn){
   labelsVisible=!labelsVisible;btn.classList.toggle('active');
   var d=labelsVisible?'block':'none';
   document.querySelectorAll('.marker-label').forEach(function(el){el.style.display=d;});
+}
+function toggleHeatmap(btn){
+  heatmapOn=!heatmapOn;btn.classList.toggle('active');
+  document.querySelectorAll('.leaflet-marker-icon').forEach(function(el){
+    if(heatmapOn)el.classList.add('heatmap-on');else el.classList.remove('heatmap-on');
+  });
 }
 
 /* ═══ EXPORT PDF ═══ */
