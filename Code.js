@@ -24,15 +24,16 @@ function onOpen() {
     .addItem('📋 Initialiser le classeur', 'initialiserClasseur')
     .addItem('👥 Peupler les ISP (1ère fois)', 'peuplerISP')
     .addSeparator()
-    .addItem('🔄 Actualiser Par Centre', 'actualiserParCentre')
-    .addItem('🎯 Actualiser Priorisation', 'actualiserPriorisation')
     .addItem('🔄 Tout actualiser', 'toutActualiser')
     .addSeparator()
     .addItem('🗺️ Ouvrir la carte', 'ouvrirCarte')
     .addToUi();
 
-  // Auto-installer le trigger si pas encore fait
-  _autoInstallerTrigger();
+  // Actualisation automatique à chaque ouverture du classeur
+  try {
+    DataService.actualiserParCentre();
+    PriorisationService.actualiserPriorisation();
+  } catch (err) { /* onglets pas encore créés */ }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -95,17 +96,11 @@ function getPlanRecrutement() {
 
 /* ═══════════════════════════════════════════════════════
    TRIGGER onEdit — MISE À JOUR AUTOMATIQUE
-   Dès qu'on modifie l'onglet ISP, les onglets Par Centre
-   et Priorisation sont recalculés automatiquement.
+   Simple trigger : se déclenche à chaque modification,
+   sans aucune installation nécessaire.
    ═══════════════════════════════════════════════════════ */
 
-/**
- * Trigger installable onEdit — se déclenche à chaque modification.
- * Installé automatiquement par _autoInstallerTrigger().
- * Recalcule Par Centre + Priorisation dès qu'on touche à l'onglet ISP
- * ou à la colonne Effectif Cible de l'onglet Par Centre.
- */
-function onEditAuto(e) {
+function onEdit(e) {
   try {
     if (!e || !e.range) return;
     var sheetName = e.range.getSheet().getName();
@@ -114,28 +109,7 @@ function onEditAuto(e) {
       PriorisationService.actualiserPriorisation();
     }
   } catch (err) {
-    Logger.log('onEditAuto error: ' + err.message);
-  }
-}
-
-/**
- * Installe automatiquement le trigger onEdit s'il n'existe pas encore.
- * Appelé à chaque onOpen() — ne crée pas de doublon.
- */
-function _autoInstallerTrigger() {
-  var found = false;
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'onEditAuto') found = true;
-  });
-  if (!found) {
-    ScriptApp.newTrigger('onEditAuto')
-      .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
-      .onEdit()
-      .create();
-    SpreadsheetApp.getActiveSpreadsheet().toast(
-      'Mise à jour automatique activée ✅',
-      'Carte Opérationnelle', 3
-    );
+    Logger.log('onEdit error: ' + err.message);
   }
 }
 
