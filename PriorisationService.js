@@ -3,8 +3,8 @@
  * Service de priorisation du recrutement
  *
  * Algorithme : on recrute toujours 1 ISP dans le centre qui a
- * le PLUS MAUVAIS taux (effectif actuel / effectif cible).
- * Cela garantit un remplissage équilibré de tous les centres.
+ * le PLUS GRAND DÉFICIT en valeur absolue (cible - actuel).
+ * En cas d'égalité, on prend le centre avec le plus mauvais taux.
  */
 
 var PriorisationService = (function () {
@@ -37,14 +37,18 @@ var PriorisationService = (function () {
     var securite = 5000; // sécurité anti-boucle infinie
 
     while (securite-- > 0) {
-      // Trouver le centre avec le pire taux parmi ceux pas encore complets
+      // Trouver le centre avec le plus grand déficit absolu parmi ceux pas encore complets
       var pire = null;
+      var pireDeficit = 0;
       var pireTaux = Infinity;
 
       etat.forEach(function (c) {
         if (c.actuel < c.cible) {
+          var deficit = c.cible - c.actuel;
           var taux = c.actuel / c.cible;
-          if (taux < pireTaux) {
+          // Priorité au plus grand déficit absolu, puis au pire taux en cas d'égalité
+          if (deficit > pireDeficit || (deficit === pireDeficit && taux < pireTaux)) {
+            pireDeficit = deficit;
             pireTaux = taux;
             pire = c;
           }
